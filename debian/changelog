@@ -1,0 +1,5 @@
+calamares (0-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Rohan Garg <shadeslayer@systems>  Thu, 16 Oct 2014 17:22:15 +0200
