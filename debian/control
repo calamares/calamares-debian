@@ -20,7 +20,8 @@ Build-Depends: debhelper (>= 9), cmake,
  libyaml-cpp-dev,
  pkg-config,
  libatasmart-dev,
- pkg-kde-tools
+ pkg-kde-tools,
+ qttools5-dev-tools
 Standards-Version: 3.9.5
 Homepage: https://github.com/calamares/calamares
 Vcs-Git: https://github.com/calamares/calamares-debian.git
