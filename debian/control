@@ -3,7 +3,6 @@ Section: devel
 Priority: optional
 Maintainer: Rohan Garg <rohan@kde.org>
 Build-Depends: debhelper (>= 9), cmake,
- extra-cmake-modules,
  qtbase5-dev,
  libqt5svg5-dev,
  extra-cmake-modules,
@@ -24,7 +23,7 @@ Build-Depends: debhelper (>= 9), cmake,
  qttools5-dev-tools,
  libpolkit-qt5-1-dev,
  qtdeclarative5-dev
-Standards-Version: 3.9.5
+Standards-Version: 3.9.6
 Homepage: https://github.com/calamares/calamares
 Vcs-Git: http://github.com/calamares/calamares-debian.git
 Vcs-Browser: https://github.com/calamares/calamares-debian.git
