@@ -1,4 +1,4 @@
-usr/*
+debian/packages.conf /etc/calamares/modules/
 debian/settings.conf /etc/calamares/
 debian/unpackfs.conf /etc/calamares/modules/
-debian/packages.conf /etc/calamares/modules/
+usr/*
