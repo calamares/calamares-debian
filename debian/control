@@ -30,7 +30,7 @@ Vcs-Browser: https://github.com/calamares/calamares-debian.git
 
 Package: calamares
 Architecture: any
-Depends: squashfs-tools, ${shlibs:Depends}, ${misc:Depends}
+Depends: squashfs-tools, grub2, os-prober, ${shlibs:Depends}, ${misc:Depends}
 Description: distribution-independent installer framework
  distribution-independent installer framework.
  .
