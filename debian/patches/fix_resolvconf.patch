@@ -1,0 +1,22 @@
+From 2e27c3b84b28196790d905882cc3210b8df0e2cd Mon Sep 17 00:00:00 2001
+From: Teo Mrnjavac <teo@kde.org>
+Date: Tue, 2 Aug 2016 13:25:00 +0200
+Subject: [PATCH] Don't try to overwrite resolv.conf in no-chroot mode.
+
+---
+ src/modules/networkcfg/main.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/modules/networkcfg/main.py b/src/modules/networkcfg/main.py
+index 7059afd..98bc231 100644
+--- a/src/modules/networkcfg/main.py
++++ b/src/modules/networkcfg/main.py
+@@ -56,7 +56,7 @@ def run():
+     # We need to overwrite the default resolv.conf in the chroot.
+     source_resolv = "/etc/resolv.conf"
+     target_resolv = os.path.join(root_mount_point, "etc/resolv.conf")
+-    if os.path.exists(source_resolv):
++    if source_resolv != target_resolv and os.path.exists(source_resolv):
+         try:
+             shutil.copy(source_resolv, target_resolv)
+         except FileNotFoundError:
