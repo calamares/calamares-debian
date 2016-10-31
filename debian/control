@@ -42,7 +42,7 @@ Depends: e2fsprogs (>= 1.43),
          os-prober,
          ${misc:Depends},
          ${shlibs:Depends}
-Recommends: grub2, konsole, squashfs-tools
+Recommends: grub-efi-amd64-bin, grub-pc, konsole, squashfs-tools
 Description: distribution-independent installer framework
  distribution-independent installer framework.
  .
