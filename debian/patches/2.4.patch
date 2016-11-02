@@ -1,0 +1,289 @@
+diff --git a/README.md b/README.md
+index 411a0ab..f5df74e 100644
+--- a/README.md
++++ b/README.md
+@@ -28,10 +28,8 @@ Modules:
+  * extra-cmake-modules
+  * KF5: KCoreAddons, KConfig, KI18n, KIconThemes, KIO, KService
+  * KPMcore >= 2.2
+- * sgdisk
+ * bootloader:
+  * systemd-boot or GRUB
+- * sgdisk
+ * unpackfs:
+  * squashfs-tools
+  * rsync
+diff --git a/src/modules/bootloader/main.py b/src/modules/bootloader/main.py
+index d292de6..e367eeb 100644
+--- a/src/modules/bootloader/main.py
++++ b/src/modules/bootloader/main.py
+@@ -258,7 +258,7 @@ def vfat_correct_case(parent, name):
+ 
+ 
+ def prepare_bootloader(fw_type):
+-    """ Prepares bootloader and set proper flags to EFI boot partition (esp,boot).
++    """ Prepares bootloader.
+     Based on value 'efi_boot_loader', it either calls systemd-boot or grub to be installed.
+ 
+     :param fw_type:
+@@ -267,33 +267,6 @@ def prepare_bootloader(fw_type):
+     efi_boot_loader = libcalamares.job.configuration["efiBootLoader"]
+     efi_directory = libcalamares.globalstorage.value("efiSystemPartition")
+ 
+-    if fw_type == "efi":
+-        partitions = libcalamares.globalstorage.value("partitions")
+-        boot_p = ""
+-        device = ""
+-
+-        for partition in partitions:
+-            if partition["mountPoint"] == efi_directory:
+-                boot_device = partition["device"]
+-                boot_p = boot_device[-1:]
+-                device = boot_device[:-1]
+-
+-                if not boot_p or not device:
+-                    return ("EFI directory \"{!s}\" not found!".format(efi_directory),
+-                            "Boot partition: \"{!s}\"".format(boot_p),
+-                            "Boot device: \"{!s}\"".format(device))
+-                else:
+-                    print("EFI directory: \"{!s}\"".format(efi_directory))
+-                    print("Boot partition: \"{!s}\"".format(boot_p))
+-                    print("Boot device: \"{!s}\"".format(device))
+-
+-        if not device:
+-            print("WARNING: no EFI system partition or EFI system partition mount point not set.")
+-            print("         >>> no EFI bootloader will be installed <<<")
+-            return None
+-        print("Set 'EF00' flag")
+-        subprocess.call(["sgdisk", "--typecode={!s}:EF00".format(boot_p), "{!s}".format(device)])
+-
+     if efi_boot_loader == "systemd-boot" and fw_type == "efi":
+         install_systemd_boot(efi_directory)
+     else:
+diff --git a/src/modules/displaymanager/main.py b/src/modules/displaymanager/main.py
+index 8f7ff98..02412ae 100644
+--- a/src/modules/displaymanager/main.py
++++ b/src/modules/displaymanager/main.py
+@@ -24,6 +24,7 @@ import os
+ import collections
+ import re
+ import libcalamares
++import configparser
+ 
+ 
+ DesktopEnvironment = collections.namedtuple('DesktopEnvironment', ['executable', 'desktop_file'])
+@@ -253,34 +254,31 @@ def set_autologin(username, displaymanagers, default_desktop_environment, root_m
+         # Systems with Sddm as Desktop Manager
+         sddm_conf_path = os.path.join(root_mount_point, "etc/sddm.conf")
+ 
++        sddm_config = configparser.ConfigParser()
++        # Make everything case sensitive
++        sddm_config.optionxform = str
++
+         if os.path.isfile(sddm_conf_path):
+-            libcalamares.utils.debug('SDDM config file exists')
+-        else:
+-            libcalamares.utils.check_target_env_call(["sh", "-c", "sddm --example-config > /etc/sddm.conf"])
++            sddm_config.read(sddm_conf_path)
+ 
+-        text = []
++        autologin_section = {}
++        if 'Autologin' in sddm_config:
++            autologin_section = sddm_config['Autologin']
+ 
+-        with open(sddm_conf_path, 'r') as sddm_conf:
+-            text = sddm_conf.readlines()
+-
+-        with open(sddm_conf_path, 'w') as sddm_conf:
+-            for line in text:
+-                # User= line, possibly commented out
+-                if re.match('\\s*(?:#\\s*)?User=', line):
+-                    if do_autologin:
+-                        line = 'User={!s}\n'.format(username)
+-                    else:
+-                        line = '#User=\n'
+-
+-                # Session= line, commented out or with empty value
+-                if re.match('\\s*#\\s*Session=|\\s*Session=$', line):
+-                    if default_desktop_environment is not None:
+-                        if do_autologin:
+-                            line = 'Session={!s}.desktop\n'.format(default_desktop_environment.desktop_file)
+-                        else:
+-                            line = '#Session={!s}.desktop\n'.format(default_desktop_environment.desktop_file)
++        if do_autologin:
++            autologin_section['User'] = username
++
++        if default_desktop_environment is not None:
++            autologin_section['Session'] = default_desktop_environment.desktop_file
++
++        if autologin_section:
++            if 'Autologin' in sddm_config:
++                sddm_config['Autologin'].update(autologin_section)
++            else:
++                sddm_config['Autologin'] = autologin_section
+ 
+-                sddm_conf.write(line)
++        with open(sddm_conf_path, 'w') as sddm_config_file:
++            sddm_config.write(sddm_config_file, space_around_delimiters=False)
+ 
+     return None
+ 
+diff --git a/src/modules/netinstall/NetInstallPage.cpp b/src/modules/netinstall/NetInstallPage.cpp
+index 0e3a18c..89f8e58 100644
+--- a/src/modules/netinstall/NetInstallPage.cpp
++++ b/src/modules/netinstall/NetInstallPage.cpp
+@@ -111,7 +111,7 @@ NetInstallPage::dataIsHere( QNetworkReply* reply )
+             continue;
+         }
+ 
+-        GroupSelectionWidget* groupWidget = new GroupSelectionWidget( group.name, group.description, group.packages, this );
++        GroupSelectionWidget* groupWidget = new GroupSelectionWidget( group.name, group.description, group.packages, group.selected, this );
+         m_groupWidgets.insert( groupKey, groupWidget );
+         ui->groupswidget->layout()->addWidget( groupWidget );
+ 
+diff --git a/src/modules/netinstall/widgets/groupselectionwidget.cpp b/src/modules/netinstall/widgets/groupselectionwidget.cpp
+index b477c04..3048fb0 100644
+--- a/src/modules/netinstall/widgets/groupselectionwidget.cpp
++++ b/src/modules/netinstall/widgets/groupselectionwidget.cpp
+@@ -20,7 +20,7 @@
+ 
+ #include <QtDebug>
+ 
+-GroupSelectionWidget::GroupSelectionWidget( QString name, QString description, QStringList packages, QWidget* parent ) :
++GroupSelectionWidget::GroupSelectionWidget( QString name, QString description, QStringList packages, bool selected, QWidget* parent ) :
+     QWidget( parent ),
+     m_isToggled( false )
+ {
+@@ -29,6 +29,7 @@ GroupSelectionWidget::GroupSelectionWidget( QString name, QString description, Q
+     connect( ui.group, &QCheckBox::toggled, this, &GroupSelectionWidget::toggleGroup );
+ 
+     ui.group->setText( name );
++    ui.group->setChecked( selected ); // also triggers the toggleGroup slot
+     ui.description->setText( description );
+     const int columns = 4;
+     const int rows = ( packages.size() - 1 ) / columns + 1;
+diff --git a/src/modules/netinstall/widgets/groupselectionwidget.h b/src/modules/netinstall/widgets/groupselectionwidget.h
+index a003f48..1f7a0fc 100644
+--- a/src/modules/netinstall/widgets/groupselectionwidget.h
++++ b/src/modules/netinstall/widgets/groupselectionwidget.h
+@@ -29,7 +29,7 @@ class GroupSelectionWidget : public QWidget
+ {
+     Q_OBJECT
+ public:
+-    explicit GroupSelectionWidget( QString name, QString description, QStringList packages, QWidget* parent = nullptr );
++    explicit GroupSelectionWidget( QString name, QString description, QStringList packages, bool selected, QWidget* parent = nullptr );
+ 
+     // Current status of the group: is it selected in the view?
+     bool isToggled() const;
+diff --git a/src/modules/packages/main.py b/src/modules/packages/main.py
+index 943b032..1f9253a 100644
+--- a/src/modules/packages/main.py
++++ b/src/modules/packages/main.py
+@@ -91,6 +91,22 @@ class PackageManager:
+         elif self.backend == "entropy":
+             check_target_env_call(["equo", "rm"] + pkgs)
+ 
++    def update_db(self):
++        if self.backend == "packagekit":
++            check_target_env_call(["pkcon", "refresh"])
++        elif self.backend == "zypp":
++            check_target_env_call(["zypper", "update"])
++        elif self.backend == "urpmi":
++            check_target_env_call(["urpmi.update", "-a"])
++        elif self.backend == "apt":
++            check_target_env_call(["apt-get", "update"])
++        elif self.backend == "pacman":
++            check_target_env_call(["pacman", "-Sy"])
++        elif self.backend == "portage":
++            check_target_env_call(["emerge", "--sync"])
++        elif self.backend == "entropy":
++            check_target_env_call(["equo", "update"])
++
+ 
+ def run_operations(pkgman, entry):
+     """ Call package manager with given parameters.
+@@ -121,6 +137,10 @@ def run():
+     pkgman = PackageManager(backend)
+     operations = libcalamares.job.configuration.get("operations", [])
+ 
++    update_db = libcalamares.job.configuration.get("update_db", False)
++    if update_db and libcalamares.globalstorage.value("hasInternet"):
++        pkgman.update_db()
++
+     for entry in operations:
+         run_operations(pkgman, entry)
+ 
+diff --git a/src/modules/packages/packages.conf b/src/modules/packages/packages.conf
+index e727637..8dd06d5 100644
+--- a/src/modules/packages/packages.conf
++++ b/src/modules/packages/packages.conf
+@@ -12,6 +12,9 @@
+ #  - entropy	 - Sabayon package manager
+ #
+ backend: packagekit
++
++update_db: true
++
+ #
+ # List of maps with package operations such as install or remove.
+ # Distro developers can provide a list of packages to remove
+@@ -38,7 +41,7 @@ backend: packagekit
+ #  - remove:
+ #      - pkg2
+ #      - pkg1
+-#    install:
++#  - install:
+ #      - pkgs6
+ #      - pkg7
+ #  - localInstall:
+diff --git a/src/modules/partition/core/PartitionActions.cpp b/src/modules/partition/core/PartitionActions.cpp
+index e2c6ca6..aa9c0af 100644
+--- a/src/modules/partition/core/PartitionActions.cpp
++++ b/src/modules/partition/core/PartitionActions.cpp
+@@ -140,7 +140,8 @@ doAutopartition( PartitionCoreModule* core, Device* dev, const QString& luksPass
+             PartitionRole( PartitionRole::Primary ),
+             FileSystem::Fat32,
+             firstFreeSector,
+-            lastSector
++            lastSector,
++            PartitionTable::FlagEsp
+         );
+         PartitionInfo::setFormat( efiPartition, true );
+         PartitionInfo::setMountPoint( efiPartition, Calamares::JobQueue::instance()
+diff --git a/src/modules/partition/core/PartitionCoreModule.cpp b/src/modules/partition/core/PartitionCoreModule.cpp
+index cf2b2c2..4e8da4f 100644
+--- a/src/modules/partition/core/PartitionCoreModule.cpp
++++ b/src/modules/partition/core/PartitionCoreModule.cpp
+@@ -547,29 +547,14 @@ PartitionCoreModule::scanForEfiSystemPartitions()
+         devices.append( device );
+     }
+ 
+-    //FIXME: Unfortunately right now we have to call sgdisk manually because
+-    //       the KPM submodule does not expose the ESP flag from libparted.
+-    //       The following findPartitions call and lambda should be scrapped and
+-    //       rewritten based on libKPM.     -- Teo 5/2015
+     QList< Partition* > efiSystemPartitions =
+         KPMHelpers::findPartitions( devices,
+                                  []( Partition* partition ) -> bool
+     {
+-        QProcess process;
+-        process.setProgram( "sgdisk" );
+-        process.setArguments( { "-i",
+-                                QString::number( partition->number() ),
+-                                partition->devicePath() } );
+-        process.setProcessChannelMode( QProcess::MergedChannels );
+-        process.start();
+-        if ( process.waitForFinished() )
++        if ( partition->activeFlags().testFlag( PartitionTable::FlagEsp ) )
+         {
+-            if ( process.readAllStandardOutput()
+-                    .contains( "C12A7328-F81F-11D2-BA4B-00A0C93EC93B" ) )
+-            {
+-                cDebug() << "Found EFI system partition at" << partition->partitionPath();
+-                return true;
+-            }
++            cDebug() << "Found EFI system partition at" << partition->partitionPath();
++            return true;
+         }
+         return false;
+     } );
