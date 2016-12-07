@@ -39,7 +39,7 @@ Vcs-Browser: https://github.com/calamares/calamares-debian.git
 Package: calamares
 Architecture: any
 Depends: e2fsprogs (>= 1.43),
-         kpmcore,
+         kpmcore | libkpmcore3,
          os-prober,
          ${misc:Depends},
          ${shlibs:Depends}
