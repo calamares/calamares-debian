@@ -44,7 +44,7 @@ index 88b030f..4b46382 100644
      // If we're in chroot mode (normal install mode), then we immediately set the
      // timezone on the live system.
 diff --git a/src/modules/packages/main.py b/src/modules/packages/main.py
-index f0f7b38..cc3dbf2 100644
+index f0f7b38..767aa40 100644
 --- a/src/modules/packages/main.py
 +++ b/src/modules/packages/main.py
 @@ -21,7 +21,7 @@
@@ -68,9 +68,9 @@ index f0f7b38..cc3dbf2 100644
 +            if  locale != "en":
 +                entry = Template(e)
 +                ret.append(entry.safe_substitute(LOCALE=locale))
-+            else
-+                ret.append(e) if 'LOCALE' not in e
-+    else
++            elif 'LOCALE' not in e:
++                    ret.append(e)
++    else:
 +        ret = list
 +    return ret
 +
