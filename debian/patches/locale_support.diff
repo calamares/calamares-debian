@@ -1,40 +1,50 @@
- src/modules/locale/LocaleConfiguration.cpp |  7 ++-----
- src/modules/packages/main.py               | 27 +++++++++++++++++----------
- 2 files changed, 19 insertions(+), 15 deletions(-)
 diff --git a/src/modules/locale/LocaleConfiguration.cpp b/src/modules/locale/LocaleConfiguration.cpp
-index b89bc97..bf9d940 100644
+index 096d0dc..bf9d940 100644
 --- a/src/modules/locale/LocaleConfiguration.cpp
 +++ b/src/modules/locale/LocaleConfiguration.cpp
 @@ -17,6 +17,7 @@
   */
-
+ 
  #include "LocaleConfiguration.h"
 +#include <QLocale>
-
+ 
  LocaleConfiguration::LocaleConfiguration()
  {
-@@ -41,7 +42,7 @@ LocaleConfiguration::fromLanguageAndLocation( const QString& languageLocale,
+@@ -41,6 +42,7 @@ LocaleConfiguration::fromLanguageAndLocation( const QString& languageLocale,
  {
      LocaleConfiguration lc = LocaleConfiguration();
      QString language = languageLocale.split( '_' ).first();
--    lc.myLanguageLocaleBcp47 = language;
 +    lc.myLanguageLocaleBcp47 = QLocale(language).bcp47Name();
-
+ 
      QStringList linesForLanguage;
      for ( const QString &line : availableLocales )
-@@ -81,10 +82,6 @@ LocaleConfiguration::fromLanguageAndLocation( const QString& languageLocale,
-         # locale categories reflect the selected location. */
-     if ( language == "pt" || language == "zh" )
-     {
--        if ( countryCode.toLower() == "br" || countryCode.toLower() == "cn" || countryCode.toLower() == "tw" )
--	{
--		lc.myLanguageLocaleBcp47 = language.toLower() + "-" + countryCode.toLower();
--	}
-         QString proposedLocale = QString( "%1_%2" ).arg( language )
-                                                    .arg( countryCode );
-         foreach ( QString line, linesForLanguage )
+diff --git a/src/modules/locale/LocaleConfiguration.h b/src/modules/locale/LocaleConfiguration.h
+index 230e8bd..54e498c 100644
+--- a/src/modules/locale/LocaleConfiguration.h
++++ b/src/modules/locale/LocaleConfiguration.h
+@@ -38,6 +38,7 @@ public:
+     // avoid confusion with locale.h.
+     QString lang, lc_numeric, lc_time, lc_monetary, lc_paper, lc_name, lc_address,
+             lc_telephone, lc_measurement, lc_identification;
++    QString myLanguageLocaleBcp47;
+     QMap< QString, QString > toMap();
+ };
+ 
+diff --git a/src/modules/locale/LocalePage.cpp b/src/modules/locale/LocalePage.cpp
+index 88b030f..4b46382 100644
+--- a/src/modules/locale/LocalePage.cpp
++++ b/src/modules/locale/LocalePage.cpp
+@@ -474,6 +474,8 @@ LocalePage::updateGlobalStorage()
+             ->insert( "locationRegion", location.region );
+     Calamares::JobQueue::instance()->globalStorage()
+             ->insert( "locationZone", location.zone );
++    Calamares::JobQueue::instance()->globalStorage()
++            ->insert( "locale", m_selectedLocaleConfiguration.myLanguageLocaleBcp47);
+ 
+     // If we're in chroot mode (normal install mode), then we immediately set the
+     // timezone on the live system.
 diff --git a/src/modules/packages/main.py b/src/modules/packages/main.py
-index 1588110..cc3dbf2 100644
+index f0f7b38..cc3dbf2 100644
 --- a/src/modules/packages/main.py
 +++ b/src/modules/packages/main.py
 @@ -21,7 +21,7 @@
@@ -43,13 +53,13 @@ index 1588110..cc3dbf2 100644
  from libcalamares.utils import check_target_env_call, target_env_call
 -
 +from string import Template
-
+ 
  class PackageManager:
      """ Package manager class.
 @@ -109,6 +109,21 @@ class PackageManager:
              check_target_env_call(["equo", "update"])
-
-
+ 
+ 
 +def subst_locale(list):
 +    ret = []
 +    locale = libcalamares.globalstorage.value("locale")
@@ -67,20 +77,11 @@ index 1588110..cc3dbf2 100644
 +
  def run_operations(pkgman, entry):
      """ Call package manager with given parameters.
-
-@@ -116,15 +131,7 @@ def run_operations(pkgman, entry):
+ 
+@@ -116,6 +131,7 @@ def run_operations(pkgman, entry):
      :param entry:
      """
      for key in entry.keys():
--        if libcalamares.globalstorage.contains("locale"):
--            if libcalamares.globalstorage.value("locale") != "en":
--                entry[key] = [pkg.replace("%LOCALE%", libcalamares.globalstorage.value("locale")) for pkg in entry[key]]
--            else:
--                newlist = []
--                for i,pkg in enumerate(entry[key]):
--                    if "%LOCALE%" not in pkg:
--                        newlist.append(pkg)
--                entry[key] = newlist
 +        entry[key] = subst_locale(entry[key])
          if key == "install":
              pkgman.install(entry[key])
