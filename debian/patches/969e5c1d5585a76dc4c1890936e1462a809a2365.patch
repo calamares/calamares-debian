@@ -1,0 +1,24 @@
+From 969e5c1d5585a76dc4c1890936e1462a809a2365 Mon Sep 17 00:00:00 2001
+From: Teo Mrnjavac <teo@kde.org>
+Date: Tue, 17 Jan 2017 18:13:51 +0100
+Subject: [PATCH] Improve check.
+
+---
+ src/modules/bootloader/main.py | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/modules/bootloader/main.py b/src/modules/bootloader/main.py
+index 786342b..a8306d8 100644
+--- a/src/modules/bootloader/main.py
++++ b/src/modules/bootloader/main.py
+@@ -284,6 +284,10 @@ def run():
+     """
+ 
+     fw_type = libcalamares.globalstorage.value("firmwareType")
++
++    if libcalamares.globalstorage.value("bootLoader") is None and fw_type != "efi":
++        return None
++
+     prepare_bootloader(fw_type)
+ 
+     return None
