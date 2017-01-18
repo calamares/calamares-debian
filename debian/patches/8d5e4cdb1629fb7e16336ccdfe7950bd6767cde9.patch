@@ -1,0 +1,22 @@
+From 8d5e4cdb1629fb7e16336ccdfe7950bd6767cde9 Mon Sep 17 00:00:00 2001
+From: Teo Mrnjavac <teo@kde.org>
+Date: Tue, 17 Jan 2017 17:02:53 +0100
+Subject: [PATCH] Don't assume 'User' exists in autologin section.
+
+---
+ src/modules/displaymanager/main.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/modules/displaymanager/main.py b/src/modules/displaymanager/main.py
+index 57945fa..c8c3dec 100644
+--- a/src/modules/displaymanager/main.py
++++ b/src/modules/displaymanager/main.py
+@@ -267,7 +267,7 @@ def set_autologin(username, displaymanagers, default_desktop_environment, root_m
+ 
+         if do_autologin:
+             autologin_section['User'] = username
+-        else:
++        elif 'User' in autologin_section:
+             del autologin_section['User']
+ 
+         if default_desktop_environment is not None:
