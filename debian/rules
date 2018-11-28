@@ -4,7 +4,7 @@
 	dh $@ --with kf5 --parallel
 
 override_dh_auto_configure:
-	dh_auto_configure -- -DWEBVIEW_FORCE_WEBKIT=1 -DKDE_INSTALL_USE_QT_SYS_PATHS=ON
+	dh_auto_configure -- -DWEBVIEW_FORCE_WEBKIT=1 -DKDE_INSTALL_USE_QT_SYS_PATHS=ON -DINSTALL_CONFIG=ON
 
 override_dh_install:
 	dh_install --fail-missing
